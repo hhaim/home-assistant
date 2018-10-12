@@ -388,6 +388,7 @@ class DeviceTracker:
         tasks = []
         for device in self.devices.values():
             if device.track and not device.last_seen:
+                device.last_seen = dt_util.utcnow()
                 tasks.append(self.hass.async_create_task(
                     async_init_single_device(device)))
 
