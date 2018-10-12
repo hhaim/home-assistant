@@ -17,6 +17,8 @@ import threading
 from time import monotonic
 import uuid
 
+#define my 
+
 from types import MappingProxyType
 from typing import (  # noqa: F401 pylint: disable=unused-import
     Optional, Any, Callable, List, TypeVar, Dict, Coroutine, Set,
