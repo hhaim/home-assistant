@@ -371,7 +371,7 @@ class DeviceTracker:
         This method must be run in the event loop.
         """
         for device in self.devices.values():
-            if (device.track and device.last_update_home) and \
+            if (device.track and (device.state == STATE_HOME)) and \
                device.stale(now):
                 self.hass.async_create_task(device.async_update_ha_state(True))
 
@@ -444,7 +444,7 @@ class Device(Entity):
 
         self.away_hide = hide_if_away
 
-        self.source_type = None
+        self.source_type = 'loading'
 
         self._attributes = {}
 
@@ -537,6 +537,7 @@ class Device(Entity):
         This method is a coroutine.
         """
         if not self.last_seen:
+            self.last_seen = dt_util.utcnow()
             return
         if self.location_name:
             self._state = self.location_name
