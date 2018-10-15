@@ -371,8 +371,7 @@ class DeviceTracker:
         This method must be run in the event loop.
         """
         for device in self.devices.values():
-            if (device.track and device.last_update_home) and \
-               device.stale(now):
+            if device.stale(now):
                 self.hass.async_create_task(device.async_update_ha_state(True))
 
     async def async_setup_tracked_device(self):
@@ -382,6 +381,7 @@ class DeviceTracker:
         """
         async def async_init_single_device(dev):
             """Init a single device_tracker entity."""
+            device.last_seen = dt_util.utcnow() 
             await dev.async_added_to_hass()
             await dev.async_update_ha_state()
 
@@ -500,6 +500,8 @@ class Device(Entity):
         self.source_type = source_type
         self.last_seen = dt_util.utcnow()
         self.host_name = host_name
+        if not (location_name or gps):
+            location_name = STATE_HOME 
         self.location_name = location_name
         self.consider_home = consider_home or self.consider_home
 
@@ -528,16 +530,18 @@ class Device(Entity):
 
         Async friendly.
         """
-        return self.last_seen and \
-            (now or dt_util.utcnow()) - self.last_seen > self.consider_home
+        assert(self.last_seen)
+        return (now or dt_util.utcnow()) - self.last_seen > self.consider_home
 
     async def async_update(self):
         """Update state of entity.
 
         This method is a coroutine.
         """
-        if not self.last_seen:
-            return
+        assert(self.last_seen);
+        if self.stale():
+            self._state = STATE_NOT_HOME
+            self.gps = None
         if self.location_name:
             self._state = self.location_name
         elif self.gps is not None and self.source_type == SOURCE_TYPE_GPS:
@@ -549,13 +553,8 @@ class Device(Entity):
                 self._state = STATE_HOME
             else:
                 self._state = zone_state.name
-        elif self.stale():
-            self._state = STATE_NOT_HOME
-            self.gps = None
-            self.last_update_home = False
         else:
             self._state = STATE_HOME
-            self.last_update_home = True
 
     async def async_added_to_hass(self):
         """Add an entity."""
